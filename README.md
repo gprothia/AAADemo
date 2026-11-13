@@ -57,6 +57,31 @@ specs/ORD-001-*.md  ──►  Antigravity: /generate-tests  ──►  tests/ap
 | `.github/workflows/pr-sandbox-cleanup.yml` | Teardown on close + stale sweep |
 | `.github/gemini/spec-review-prompt.md` | Prompt for the Gemini review comment |
 
+## The demo app
+
+`services/` holds a small online store that plays the "existing app":
+
+| Feature | Spec | Status |
+|---|---|---|
+| Browse the product catalog | `specs/CAT-001-browse-catalog.md` | implemented |
+| Create an order | `specs/ORD-001-create-order.md` | implemented |
+
+Run it and its tests on your machine:
+
+```bash
+pip install -r services/web/requirements.txt -r tests/requirements.txt
+(cd services/api && uvicorn app:app --port 8080 &)
+(cd services/web && API_URL=http://localhost:8080 uvicorn app:app --port 3000 &)
+open http://localhost:3000            # or visit it in a browser
+
+API_BASE_URL=http://localhost:8080 pytest tests/api -q
+cd tests/ui && npm install && npx playwright install chromium \
+  && WEB_BASE_URL=http://localhost:3000 npx playwright test
+```
+
+The Google Cloud jobs in the PR workflow stay skipped until the repository variables below
+are set; the traceability check runs from day one.
+
 ## Day-to-day flow
 
 1. Open an issue with the **Feature spec** form. Discuss until it's agreed.

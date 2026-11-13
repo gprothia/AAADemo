@@ -1,6 +1,6 @@
 # Test-runner image: Playwright (browsers preinstalled) + Python for the API suite.
 # Keep the Playwright image tag in step with @playwright/test in tests/ui/package.json.
-FROM mcr.microsoft.com/playwright:v1.56.1-noble
+FROM mcr.microsoft.com/playwright:v1.65.0-noble
 
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*
