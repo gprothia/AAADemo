@@ -1,0 +1,49 @@
+# Rendered with envsubst in CI: NS, PR_NUMBER, SHA, CREATED_AT
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NS}
+  labels:
+    sandbox: pr
+    pr: "${PR_NUMBER}"
+  annotations:
+    sandbox/sha: "${SHA}"
+    sandbox/created-at: "${CREATED_AT}"
+---
+# Caps what one PR can consume on the shared Autopilot cluster.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-quota
+  namespace: ${NS}
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    pods: "20"
+    services.loadbalancers: "0"   # sandboxes are never exposed publicly
+---
+# Autopilot bills on requests; give anything that forgets them a small default.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sandbox-defaults
+  namespace: ${NS}
+spec:
+  limits:
+    - type: Container
+      defaultRequest: { cpu: 250m, memory: 512Mi }
+      default: { cpu: 500m, memory: 1Gi }
+---
+# Only pods in this namespace can talk to each other. Other PRs' sandboxes can't reach in.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolate-namespace
+  namespace: ${NS}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}

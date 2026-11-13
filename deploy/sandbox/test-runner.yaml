@@ -1,0 +1,32 @@
+# Rendered with envsubst in CI: NS, TEST_IMAGE
+# Two containers share /reports. "tests" runs the suites and exits; "results" just stays
+# alive so CI can `kubectl cp` the reports out. The namespace teardown removes the pod.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-runner
+  namespace: ${NS}
+  labels: { app: test-runner }
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 2400   # hard stop at 40 min
+  containers:
+    - name: tests
+      image: ${TEST_IMAGE}
+      env:
+        - { name: API_BASE_URL, value: "http://api:8080" }
+        - { name: WEB_BASE_URL, value: "http://web:3000" }
+      resources:
+        requests: { cpu: "2", memory: 4Gi }   # Chromium needs headroom
+      volumeMounts:
+        - { name: reports, mountPath: /reports }
+    - name: results
+      image: busybox:1.37
+      command: ["sh", "-c", "sleep 2400"]
+      resources:
+        requests: { cpu: 50m, memory: 64Mi }
+      volumeMounts:
+        - { name: reports, mountPath: /reports }
+  volumes:
+    - name: reports
+      emptyDir: {}

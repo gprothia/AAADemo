@@ -1,0 +1,14 @@
+# Placeholder app: replace api.yaml / web.yaml with your real manifests (or point at your
+# existing kustomize base / Helm chart). CI sets the namespace and image tags per PR.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - api.yaml
+  - web.yaml
+images:
+  - name: api
+    newName: api
+    newTag: latest
+  - name: web
+    newName: web
+    newTag: latest

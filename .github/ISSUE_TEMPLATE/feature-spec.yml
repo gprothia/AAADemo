@@ -1,0 +1,39 @@
+name: Feature spec
+description: Propose a feature. Once agreed, it becomes specs/<ID>.md in a PR.
+title: "[Spec] "
+labels: ["spec", "needs-triage"]
+body:
+  - type: input
+    id: spec_id
+    attributes:
+      label: Spec ID
+      description: Area prefix + number, e.g. ORD-002
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The user problem and the outcome we want.
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria (Given / When / Then)
+      description: One block per criterion. Tag each [api], [ui] or [api,ui].
+      value: |
+        ### <ID>-AC1 [api]
+        - **Given**
+        - **When**
+        - **Then**
+    validations:
+      required: true
+  - type: textarea
+    id: edge
+    attributes:
+      label: Edge cases & errors
+  - type: textarea
+    id: questions
+    attributes:
+      label: Open questions
