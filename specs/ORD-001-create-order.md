@@ -3,7 +3,7 @@ id: ORD-001
 title: Create an order
 status: implemented
 owner: "@gprothia"
-issue: "#2"
+issue: "#3"
 ui_routes: ["/orders/new"]
 ---
 

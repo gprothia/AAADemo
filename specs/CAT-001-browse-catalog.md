@@ -3,7 +3,7 @@ id: CAT-001
 title: Browse the product catalog
 status: implemented
 owner: "@gprothia"
-issue: "#1"
+issue: "#2"
 ui_routes: ["/products"]
 ---
 
