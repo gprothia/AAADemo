@@ -6,3 +6,5 @@ tests/ui/test-results/
 tests/ui/reports/
 reports/
 deploy/overlay-pr/
+deploy/overlay-dev/
+.tmp/

@@ -13,7 +13,8 @@ permissions:
   pull-requests: read
 
 env:
-  MAX_AGE_HOURS: 48
+  MAX_AGE_HOURS: 48       # PR sandboxes
+  DEV_MAX_AGE_HOURS: 24   # developer sandboxes from scripts/sandbox.sh
 
 jobs:
   cleanup:
@@ -46,6 +47,21 @@ jobs:
             age_h=$(( (now - $(date -u -d "$created" +%s)) / 3600 ))
             if [ "$state" != "OPEN" ] || [ "$age_h" -ge "$MAX_AGE_HOURS" ]; then
               echo "deleting $ns (PR #$pr state=$state age=${age_h}h)"
+              kubectl delete namespace "$ns" --wait=false
+            fi
+          done
+
+      - name: Sweep developer sandboxes left running
+        if: github.event_name != 'pull_request'
+        run: |
+          now=$(date -u +%s)
+          kubectl get ns -l sandbox=dev \
+            -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.annotations.sandbox/created-at}{"\n"}{end}' |
+          while read -r ns created; do
+            [ -z "$ns" ] && continue
+            age_h=$(( (now - $(date -u -d "$created" +%s)) / 3600 ))
+            if [ "$age_h" -ge "$DEV_MAX_AGE_HOURS" ]; then
+              echo "deleting $ns (developer sandbox, age=${age_h}h)"
               kubectl delete namespace "$ns" --wait=false
             fi
           done
