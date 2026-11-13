@@ -37,7 +37,8 @@ jobs:
 
   # 2) Advisory: Gemini compares changed specs with changed tests and comments on the PR.
   gemini-spec-review:
-    if: github.event.pull_request.head.repo.full_name == github.repository   # no OIDC on fork PRs
+    # Skip on fork PRs (no OIDC) and until Google Cloud is connected (repo variables set).
+    if: github.event.pull_request.head.repo.full_name == github.repository && vars.GCP_PROJECT_ID != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -76,7 +77,7 @@ jobs:
 
   # 3) Build app + test-runner images tagged with the PR head SHA.
   build:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository && vars.GCP_PROJECT_ID != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

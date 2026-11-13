@@ -1,10 +1,9 @@
 ---
 id: ORD-001
 title: Create an order
-status: approved
-owner: "@your-handle"
-issue: "#42"
-api: openapi/openapi.yaml
+status: implemented
+owner: "@gprothia"
+issue: "#3"
 ui_routes: ["/orders/new"]
 ---
 

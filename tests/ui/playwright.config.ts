@@ -15,6 +15,8 @@ export default defineConfig({
     baseURL: process.env.WEB_BASE_URL ?? 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // Local escape hatch: PW_CHANNEL=chrome uses an installed Chrome instead of Playwright's.
+    ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}),
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
