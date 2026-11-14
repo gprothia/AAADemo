@@ -3,13 +3,16 @@
 Features already live:
   CAT-001  Browse the product catalog
   ORD-001  Create an order
+  ORD-002  Cancel an order before it ships
 
 Storage is in-memory on purpose: every sandbox starts clean and seeded.
 """
 from __future__ import annotations
 
 import os
+import threading
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import FastAPI, Header, Request
@@ -38,7 +41,9 @@ def seed() -> None:
         PRODUCTS[sku] = {"sku": sku, "name": name, "price": float(Decimal(price))}
 
 
-if os.environ.get("SEED_TEST_DATA", "true").lower() == "true":
+TEST_HOOKS = os.environ.get("SEED_TEST_DATA", "true").lower() == "true"
+
+if TEST_HOOKS:
     seed()
 
 # ---------------------------------------------------------------- errors
@@ -122,6 +127,7 @@ def create_order(body: OrderIn, x_user: str = Header(default="demo")):
         "status": "pending",
         "items": lines,
         "total": float(total),
+        "cancelled_at": None,
     }
     ORDERS[order["id"]] = order
     return order
@@ -133,3 +139,41 @@ def get_order(order_id: str, x_user: str = Header(default="demo")):
     if not order or order["owner"] != x_user:
         return error(404, "ORDER_NOT_FOUND", "Order not found")
     return order
+
+
+# ---------------------------------------------------------------- ORD-002
+
+# Serialises status changes so two racing cancels can't both succeed.
+ORDERS_LOCK = threading.Lock()
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+@app.post("/orders/{order_id}/cancel")
+def cancel_order(order_id: str, x_user: str = Header(default="demo")):
+    with ORDERS_LOCK:
+        order = ORDERS.get(order_id)
+        if not order or order["owner"] != x_user:
+            return error(404, "ORDER_NOT_FOUND", "Order not found")
+        if order["status"] == "shipped":
+            return error(409, "ORDER_ALREADY_SHIPPED", "Order has already shipped and can't be cancelled")
+        if order["status"] == "cancelled":
+            return error(409, "ORDER_ALREADY_CANCELLED", "Order is already cancelled")
+        order["status"] = "cancelled"
+        order["cancelled_at"] = _utc_now()
+        return order
+
+
+if TEST_HOOKS:
+
+    @app.post("/test/orders/{order_id}/ship", include_in_schema=False)
+    def test_ship_order(order_id: str):
+        """Test-only: mark an order shipped. Exists only when SEED_TEST_DATA=true."""
+        with ORDERS_LOCK:
+            order = ORDERS.get(order_id)
+            if not order:
+                return error(404, "ORDER_NOT_FOUND", "Order not found")
+            order["status"] = "shipped"
+            return order
