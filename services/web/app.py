@@ -3,7 +3,7 @@
 Pages:
   /products         CAT-001  catalog table
   /orders/new       ORD-001  build and place an order
-  /orders/{id}      ORD-001  order confirmation
+  /orders/{id}      ORD-001  order confirmation; ORD-002 cancel order
 
 Browser calls go to /api/* on this server, which forwards them to the API service,
 so the browser only ever talks to one host.
@@ -134,14 +134,41 @@ async def show_order(order_id: str):
         for i in o["items"]
     )
     headline = "Order received" if o["status"] == "pending" else f"Order {html.escape(o['status'])}"
+    cancel_ui = CANCEL_UI.replace("{id}", html.escape(o["id"])) if o["status"] == "pending" else ""
     return page(
         f"Order {o['id']}",
         f"""<h1>{headline}</h1>
 <p>Order <code>{o['id']}</code> <span class="badge" data-testid="status-badge">{html.escape(o['status'].capitalize())}</span></p>
 <table aria-label="Order items"><thead><tr><th>SKU</th><th>Qty</th><th>Line total</th></tr></thead>
 <tbody>{rows}</tbody></table>
-<p>Total: <strong data-testid="order-total">{money(o['total'])}</strong></p>""",
+<p>Total: <strong data-testid="order-total">{money(o['total'])}</strong></p>{cancel_ui}""",
     )
+
+
+# ---------------------------------------------------------------- ORD-002
+
+CANCEL_UI = """
+<button type="button" class="secondary" id="cancel">Cancel order</button>
+<dialog id="cancel-dialog" aria-labelledby="cancel-title">
+  <h2 id="cancel-title">Cancel this order?</h2>
+  <p>This can't be undone.</p>
+  <div class="row">
+    <button type="button" id="cancel-yes">Yes, cancel order</button>
+    <button type="button" class="secondary" id="cancel-no">Keep order</button>
+  </div>
+  <p class="error" id="cancel-err" role="alert"></p>
+</dialog>
+<script>
+const dlg = document.getElementById('cancel-dialog');
+document.getElementById('cancel').onclick = () => dlg.showModal();
+document.getElementById('cancel-no').onclick = () => dlg.close();
+document.getElementById('cancel-yes').onclick = async () => {
+  const res = await fetch('/api/orders/{id}/cancel', {method: 'POST'});
+  if (res.ok) { location.reload(); return; }
+  const body = await res.json().catch(() => ({}));
+  document.getElementById('cancel-err').textContent = body.message || 'Could not cancel order';
+};
+</script>"""
 
 
 # ---------------------------------------------------------------- API pass-through

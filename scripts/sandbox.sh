@@ -44,6 +44,10 @@ render() { python3 -c 'import os,sys; sys.stdout.write(os.path.expandvars(sys.st
 log() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 
 credentials() {
+  # Authenticate kubectl with the same account as `gcloud auth login` (see "Needs" above).
+  # Without this, a gcloud config with container/use_application_default_credentials=true
+  # makes gke-gcloud-auth-plugin look for application default credentials instead.
+  export CLOUDSDK_CONTAINER_USE_APPLICATION_DEFAULT_CREDENTIALS=false
   gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "$PROJECT_ID" >/dev/null
 }
 
