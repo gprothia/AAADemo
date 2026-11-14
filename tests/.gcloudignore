@@ -1,0 +1,5 @@
+node_modules/
+test-results/
+reports/
+__pycache__/
+.pytest_cache/

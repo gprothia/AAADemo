@@ -37,3 +37,7 @@ Customers need to see what they can buy, and at what price, before placing an or
 ## Test data
 Seeded products: `TEST-SKU-1` Blue Mug $10.00, `TEST-SKU-2` Notebook $4.50,
 `TEST-SKU-3` Desk Lamp $32.00.
+
+## Open questions
+- [x] Search or filters? → Not yet, out of scope (see issue #2)
+- [x] Images or stock levels? → Not yet, out of scope

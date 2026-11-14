@@ -47,7 +47,11 @@ specs/ORD-001-*.md  ──►  Antigravity: /generate-tests  ──►  tests/ap
 | `.github/ISSUE_TEMPLATE/feature-spec.yml` | Issue form that collects a spec in the same shape |
 | `.github/pull_request_template.md` | PR checklist linking spec ↔ tests |
 | `AGENTS.md`, `.agents/rules/testing.md` | Rules Antigravity (and Gemini CLI) always follow |
-| `.agents/workflows/generate-tests.md` | AGY workflow: `/generate-tests specs/<file>.md` |
+| `.agents/workflows/*.md` | Antigravity saved commands: `/feature-request`, `/write-spec`, `/generate-tests`, `/build-spec` |
+| `.agents/rules/*.md` | Rules for feature requests, specs, testing, delivery |
+| `.agent` | Alias of `.agents` for Antigravity versions that read the singular folder |
+| `scripts/check_spec.py` | Spec format checker (runs in CI) |
+| `scripts/sandbox.sh`, `deploy/sandbox/sandbox.env` | Developer sandbox: Cloud Build → GKE → tests → reports |
 | `scripts/check_traceability.py` | Deterministic AC → test gate |
 | `tests/api`, `tests/ui` | pytest + Playwright suites (examples for ORD-001) |
 | `tests/Dockerfile`, `tests/run.sh` | Test-runner image used inside the sandbox |
@@ -82,17 +86,25 @@ cd tests/ui && npm install && npx playwright install chromium \
 The Google Cloud jobs in the PR workflow stay skipped until the repository variables below
 are set; the traceability check runs from day one.
 
-## Day-to-day flow
+## Day-to-day flow (Antigravity)
 
-1. Open an issue with the **Feature spec** form. Discuss until it's agreed.
-2. Branch, copy `specs/_TEMPLATE.md` to `specs/<ID>-<name>.md`, fill it in, set
-   `status: approved`.
-3. In Antigravity, open the repo and run `/generate-tests specs/<ID>-<name>.md`.
-   Review its plan (and any "spec questions"), approve, let it write and run the tests.
-4. Implement the feature (AGY or by hand) until the tests pass locally.
-5. Open the PR. CI posts the Gemini review, deploys `pr-<N>`, runs both suites, and adds a
-   "Spec acceptance tests" check with every test linked to its AC ID.
-6. Merge. The namespace is deleted automatically.
+Open the repo in Antigravity and type these in the agent panel. Each one is a saved workflow in
+`.agents/workflows/` that follows the rules in `.agents/rules/`.
+
+| Step | You type | Antigravity does | You do |
+|---|---|---|---|
+| 1. Request | `/feature-request customers want to cancel an order before it ships` | Drafts a GitHub issue in Feature Spec format, with open questions | Answer or edit, say "create it" |
+| 2. Spec | `/write-spec #<issue>` | Branch + `specs/ORD-002-...md`, runs `check_spec.py`, lists open questions | Answer, then approve the spec |
+| 3. Build | `/build-spec specs/ORD-002-cancel-order.md` | Plan → tests (fail) → code (pass) → screenshots | Approve the plan |
+| 4. Sandbox | (part of step 3) | `scripts/sandbox.sh all`: Cloud Build images, deploy to `dev-<branch>` on GKE, run both suites, fetch reports | Read the result line |
+| 5. PR | (part of step 3) | Pushes, opens the PR with `Closes #<issue>` and the sandbox result | Review and merge |
+
+After the PR opens, CI repeats the checks independently: spec format, traceability, Gemini
+review, image build, and a PR sandbox `pr-<N>`. Merging closes the issue.
+
+Laptop prerequisites for Antigravity: `git`, `gh` (`gh auth login`), `gcloud`
+(`gcloud auth login`), `kubectl` (`gcloud components install kubectl gke-gcloud-auth-plugin`),
+Python 3.12 and Node 22. Fill in `deploy/sandbox/sandbox.env` once.
 
 ## One-time Google Cloud setup
 
@@ -107,7 +119,8 @@ AR_REPO=pr-sandbox
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
 
 gcloud services enable container.googleapis.com artifactregistry.googleapis.com \
-  aiplatform.googleapis.com iamcredentials.googleapis.com sts.googleapis.com --project $PROJECT_ID
+  aiplatform.googleapis.com iamcredentials.googleapis.com sts.googleapis.com \
+  cloudbuild.googleapis.com --project $PROJECT_ID
 
 # Shared Autopilot cluster for all PR sandboxes
 gcloud container clusters create-auto $CLUSTER --region $REGION --project $PROJECT_ID
@@ -135,6 +148,21 @@ gcloud iam workload-identity-pools providers create-oidc github \
 gcloud iam service-accounts add-iam-policy-binding $SA --project $PROJECT_ID \
   --role=roles/iam.workloadIdentityUser \
   --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$GH_REPO"
+```
+
+For developer sandboxes (`scripts/sandbox.sh`), Cloud Build pushes the images. Let its
+service account write to the registry, and give each developer (other than project owners,
+who already can) permission to start builds and use the cluster:
+
+```bash
+BUILD_SA=$PROJECT_NUMBER-compute@developer.gserviceaccount.com   # Cloud Build's default
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$BUILD_SA" \
+  --role=roles/artifactregistry.writer
+DEV=user:someone@example.com
+for role in roles/cloudbuild.builds.editor roles/container.developer roles/storage.objectAdmin \
+            roles/serviceusage.serviceUsageConsumer; do
+  gcloud projects add-iam-policy-binding $PROJECT_ID --member="$DEV" --role=$role
+done
 ```
 
 `roles/container.developer` lets CI create and delete namespaces in the cluster. If you want

@@ -1,10 +1,10 @@
-# Rendered with envsubst in CI: NS, PR_NUMBER, SHA, CREATED_AT
+# Rendered in CI (envsubst) and by scripts/sandbox.sh: NS, SANDBOX_KIND (pr|dev), PR_NUMBER, SHA, CREATED_AT
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ${NS}
   labels:
-    sandbox: pr
+    sandbox: ${SANDBOX_KIND}
     pr: "${PR_NUMBER}"
   annotations:
     sandbox/sha: "${SHA}"

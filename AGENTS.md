@@ -1,4 +1,22 @@
-# Project rules for coding agents (Antigravity, Gemini CLI, others)
+# Project rules for coding agents (Antigravity, Claude Code, Gemini CLI, others)
+
+Read this file first, then the rule file for the task in hand:
+
+| Task | Rules | Saved command (Antigravity workflow) |
+|---|---|---|
+| Raise a feature request | `.agents/rules/feature-requests.md` | `/feature-request <idea>` |
+| Write or change a spec | `.agents/rules/specs.md` | `/write-spec #<issue>` |
+| Write tests from a spec | `.agents/rules/testing.md` | `/generate-tests specs/<file>` |
+| Build a spec end to end, sandbox, PR | `.agents/rules/delivery.md` | `/build-spec specs/<file>` |
+
+The cycle: **issue → spec (approved by a person) → tests → code → local run → GKE sandbox run
+→ pull request → CI re-checks → a person merges.**
+
+## Never
+- Commit to `main`, merge, approve, or force-push.
+- Change a spec's acceptance criteria, or a test, just to make something pass.
+- Take a business decision the issue doesn't contain. Ask, or list it as an open question.
+- Create issues, comments or PRs before showing the user the text.
 
 ## Specs are the source of truth
 - Feature specs live in `specs/*.md`. Each acceptance criterion has a stable ID like `ORD-001-AC3`
@@ -19,6 +37,11 @@
 - Prefer role/label locators in Playwright (`getByRole`, `getByLabel`); no CSS-path selectors,
   no fixed `waitForTimeout` sleeps.
 
+## The app
+- `services/api`: FastAPI, in-memory storage seeded at start (`SEED_TEST_DATA=true`).
+  Errors are JSON `{"code": "...", "message": "..."}`; the caller is the `X-User` header.
+- `services/web`: FastAPI-rendered pages; browser calls go to `/api/*`, proxied to the API.
+
 ## Before you finish
-- Run `python scripts/check_traceability.py` and fix anything it reports.
-- Run the suites locally (see `.agents/workflows/generate-tests.md`).
+- `python scripts/check_spec.py` and `python scripts/check_traceability.py` pass.
+- Both suites pass locally, then in the GKE sandbox (`scripts/sandbox.sh all`).
