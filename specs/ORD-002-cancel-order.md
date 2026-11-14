@@ -1,7 +1,7 @@
 ---
 id: ORD-002
 title: Cancel an order before it ships
-status: approved
+status: implemented
 owner: "@gprothia"
 issue: "#6"
 ui_routes: ["/orders/{id}"]
